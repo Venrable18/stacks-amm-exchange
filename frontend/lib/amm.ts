@@ -12,7 +12,18 @@ import {
   UIntCV,
 } from "@stacks/transactions";
 
-const AMM_CONTRACT_ADDRESS = "ST3P49R8XXQWG69S66MZASYPTTGNDKK0WW32RRJDN";
+const AMM_CONTRACT_ADDRESS = "ST3P49R    const poolExistsResult = await fetchCallReadOnlyFunction({
+      contractAddress: AMM_CONTRACT_ADDRESS,
+      contractName: AMM_CONTRACT_NAME,
+      functionName: "pool-exists",
+      functionArgs: [bufferCV(poolIdBytes)],
+      senderAddress: AMM_CONTRACT_ADDRESS,
+      network: STACKS_TESTNET,
+    });
+
+    if (poolExistsResult.type !== "ok") return false;
+    if (poolExistsResult.value.type !== "bool") return false;
+    return (poolExistsResult.value as any).value;ZASYPTTGNDKK0WW32RRJDN";
 const AMM_CONTRACT_NAME = "amm";
 const AMM_CONTRACT_PRINCIPAL = `${AMM_CONTRACT_ADDRESS}.${AMM_CONTRACT_NAME}`;
 
@@ -246,4 +257,62 @@ export async function getUserLiquidity(pool: Pool, user: string) {
   if (userLiquidityResult.type !== "ok") return 0;
   if (userLiquidityResult.value.type !== "uint") return 0;
   return parseInt(userLiquidityResult.value.value.toString());
+}
+
+// poolExists
+// Given a pool ID, returns whether the pool exists
+export async function poolExists(poolId: string): Promise<boolean> {
+  try {
+    // Convert hex string to Buffer for the contract call
+    const poolIdBuffer = Buffer.from(poolId, "hex");
+    
+    const poolExistsResult = await fetchCallReadOnlyFunction({
+      contractAddress: AMM_CONTRACT_ADDRESS,
+      contractName: AMM_CONTRACT_NAME,
+      functionName: "pool-exists",
+      functionArgs: [bufferCV(poolIdBuffer)],
+      senderAddress: AMM_CONTRACT_ADDRESS,
+      network: STACKS_TESTNET,
+    });
+
+    if (poolExistsResult.type !== "ok") return false;
+    if (poolExistsResult.value.type !== "bool") return false;
+    return poolExistsResult.value.value;
+  } catch (error) {
+    console.error("Error checking if pool exists:", error);
+    return false;
+  }
+}
+
+// Helper function to get pool ID from pool info
+export async function getPoolId(token0: string, token1: string, fee: number): Promise<string | null> {
+  try {
+    // Ensure correct token ordering
+    const token0Hex = cvToHex(principalCV(token0));
+    const token1Hex = cvToHex(principalCV(token1));
+    if (token0Hex > token1Hex) {
+      [token0, token1] = [token1, token0];
+    }
+
+    const poolIdResult = await fetchCallReadOnlyFunction({
+      contractAddress: AMM_CONTRACT_ADDRESS,
+      contractName: AMM_CONTRACT_NAME,
+      functionName: "get-pool-id",
+      functionArgs: [
+        Cl.tuple({
+          "token-0": principalCV(token0),
+          "token-1": principalCV(token1),
+          fee: uintCV(fee),
+        }),
+      ],
+      senderAddress: AMM_CONTRACT_ADDRESS,
+      network: STACKS_TESTNET,
+    });
+
+    if (poolIdResult.type !== "buffer") return null;
+    return poolIdResult.value;
+  } catch (error) {
+    console.error("Error getting pool ID:", error);
+    return null;
+  }
 }

@@ -132,6 +132,48 @@ describe("AMM Tests", () => {
     );
     expect(tokenTwoAmountWithdrawn).toBeLessThan(withdrawableTokenTwoPreSwap);
   });
+
+  it("should check if pool exists", () => {
+    const { result: poolId } = getPoolId();
+    const poolExistsBeforeCreation = simnet.callReadOnlyFn(
+      "amm",
+      "pool-exists",
+      [poolId],
+      alice
+    );
+    expect(poolExistsBeforeCreation.result).toBeOk(Cl.bool(false));
+
+    createPool();
+
+    const poolExistsAfterCreation = simnet.callReadOnlyFn(
+      "amm",
+      "pool-exists",
+      [poolId],
+      alice
+    );
+    expect(poolExistsAfterCreation.result).toBeOk(Cl.bool(true));
+
+    const differentPoolId = simnet.callReadOnlyFn(
+      "amm",
+      "get-pool-id",
+      [
+        Cl.tuple({
+          "token-0": mockTokenOne,
+          "token-1": mockTokenTwo,
+          fee: Cl.uint(1000), 
+        }),
+      ],
+      alice
+    );
+    
+    const differentPoolExists = simnet.callReadOnlyFn(
+      "amm",
+      "pool-exists",
+      [differentPoolId.result],
+      alice
+    );
+    expect(differentPoolExists.result).toBeOk(Cl.bool(false));
+  });
 });
 
 function createPool() {
