@@ -4,6 +4,8 @@ import {
   Pool,
   removeLiquidity,
   swap,
+  poolExists,
+  getPoolId,
 } from "@/lib/amm";
 import {
   AppConfig,
@@ -147,5 +149,99 @@ export function useStacks() {
     handleRemoveLiquidity,
     connectWallet,
     disconnectWallet,
+  };
+}
+
+export function usePoolExists(poolId: string | null) {
+  const [exists, setExists] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const checkExists = async () => {
+    if (!poolId) {
+      setExists(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await poolExists(poolId);
+      setExists(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+      setExists(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkExists();
+  }, [poolId]);
+
+  return {
+    exists,
+    loading,
+    error,
+    refetch: checkExists,
+  };
+}
+
+
+
+export function usePoolExistsByTokens(
+  token0: string | null,
+  token1: string | null,
+  fee: number | null
+) {
+  const [exists, setExists] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [poolId, setPoolId] = useState<string | null>(null);
+
+  const checkExists = async () => {
+    if (!token0 || !token1 || fee === null) {
+      setExists(null);
+      setLoading(false);
+      setError(null);
+      setPoolId(null);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const calculatedPoolId = await getPoolId(token0, token1, fee);
+      if (!calculatedPoolId) {
+        throw new Error("Failed to calculate pool ID");
+      }
+
+      setPoolId(calculatedPoolId);
+      const result = await poolExists(calculatedPoolId);
+      setExists(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+      setExists(null);
+      setPoolId(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkExists();
+  }, [token0, token1, fee]);
+
+  return {
+    exists,
+    loading,
+    error,
+    poolId,
+    refetch: checkExists,
   };
 }

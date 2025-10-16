@@ -333,6 +333,12 @@
     )
 )
 
+;; pool-exists
+;; Given a pool ID, returns whether the pool exists
+(define-read-only (pool-exists (pool-id (buff 20)))
+    (ok (is-some (map-get? pools pool-id)))
+)
+
 ;; get-position-liquidity
 ;; Given a Pool ID and a user address, returns how much liquidity the user has in the pool
 (define-read-only (get-position-liquidity (pool-id (buff 20)) (owner principal))
